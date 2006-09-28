@@ -79,6 +79,9 @@ int main()
 				}
 			}
 			
+			if(strlen(command) == 0)
+				continue;
+			
 			CommandLine* commandLine;
 			if(commandLine = parseLine(command)){
 				commands_queue.push_back(commandLine);
