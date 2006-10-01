@@ -124,9 +124,21 @@ int cmdConnect(char* params)
 	}
 	msg.GetU32();
 	std::string strversion = msg.GetString();
-	std::cout << "Hello from " << strversion << std::endl ;
 	uint16_t security = msg.GetU16();
 	uint32_t options = msg.GetU32();
+	if(security & REQUIRE_ENCRYPTION){
+		strversion = strversion + " encrypion";
+		if(options & ENCRYPTION_RSA1024XTEA){
+			strversion = strversion + "(RSA1024XTEA)";
+		}
+		else{
+			strversion = strversion + "(Not supported)";
+		}
+	}
+	if(security & REQUIRE_LOGIN){
+		strversion = strversion + " login";
+	}
+	std::cout << "Hello from " << strversion << std::endl ;
 
 	//set encryption
 	if(security & REQUIRE_ENCRYPTION){

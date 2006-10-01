@@ -21,20 +21,22 @@
 #ifndef __OTADMIN_DEFINITIONS_H__
 #define __OTADMIN_DEFINITIONS_H__
 
+#include "stdint.h"
 #define NETWORKMESSAGE_MAXSIZE 16768
 
 #if defined WIN32 || defined __WINDOWS__
-
-#pragma comment( lib, "Ws2_32.lib" )
 
 #include "windows.h"
 
 #define EWOULDBLOCK WSAEWOULDBLOCK
 
+#ifndef __GNUC__
+#pragma comment( lib, "Ws2_32.lib" )
 typedef unsigned long uint32_t;
 typedef signed long int32_t;
 typedef unsigned short uint16_t;
 typedef unsigned char uint8_t;
+#endif
 
 inline void OTSYS_SLEEP(uint32_t t){
 	Sleep(t);
@@ -68,10 +70,6 @@ inline void OTSYS_SLEEP(uint32_t t){
 
 #ifndef SOCKET_ERROR
 #define SOCKET_ERROR -1
-#endif
-
-#ifndef min
-#define min std::min
 #endif
 
 inline void OTSYS_SLEEP(int t)

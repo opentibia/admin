@@ -141,7 +141,7 @@ bool NetworkMessage::WriteToSocket(SOCKET socket)
 	}
 	
   	do{
-		int b = send(socket, (char*)m_MsgBuf + sendBytes + start, min(m_MsgSize-sendBytes+2, 1000), flags);
+		int b = send(socket, (char*)m_MsgBuf + sendBytes + start, std::min(m_MsgSize-sendBytes+2, 1000), flags);
 		if(b <= 0){
 			int errnum;
 #if defined WIN32 || defined __WINDOWS__
