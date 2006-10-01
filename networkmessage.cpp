@@ -1,5 +1,5 @@
 //////////////////////////////////////////////////////////////////////
-// OpenTibia - an opensource roleplaying game
+// OTAdmin - OpenTibia
 //////////////////////////////////////////////////////////////////////
 //
 //////////////////////////////////////////////////////////////////////
@@ -17,27 +17,6 @@
 // along with this program; if not, write to the Free Software Foundation,
 // Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 //////////////////////////////////////////////////////////////////////
-
-//////////////////////////////////////////////////////////////////////
-// OTAdmin
-//////////////////////////////////////////////////////////////////////
-//
-//////////////////////////////////////////////////////////////////////
-// This program is free software; you can redistribute it and/or
-// modify it under the terms of the GNU General Public License
-// as published by the Free Software Foundation; either version 2
-// of the License, or (at your option) any later version.
-// 
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program; if not, write to the Free Software Foundation,
-// Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
-//////////////////////////////////////////////////////////////////////
-
 
 #include <string>
 #include <iostream>
@@ -47,22 +26,28 @@
 
 #include "networkmessage.h"
 
-//#include "rsa.h"
 
+bool NetworkMessage::m_encryptionEnabled = false;
+bool NetworkMessage::m_keyset = false;
+uint32_t NetworkMessage::m_key[4] = {0};
+RSA* NetworkMessage::m_RSA = NULL;
 
 /******************************************************************************/
 
 NetworkMessage::NetworkMessage()
 {
-	m_encryptionEnabled = false;
-	m_keyset = false;
 	Reset();
 }
 
 NetworkMessage::~NetworkMessage()
 {
+	//
 }
 
+void NetworkMessage::setRSAInstance(RSA* rsa)
+{
+	m_RSA = rsa;
+}
 
 /******************************************************************************/
 
@@ -364,23 +349,22 @@ void NetworkMessage::XTEA_decrypt()
 	}
 }
 
-bool NetworkMessage::RSA_decrypt()
+bool NetworkMessage::RSA_encrypt()
 {
-	/*
-	if(m_MsgSize - m_ReadPos != 128){
+	int newPos = m_ReadPos - 128;
+	if(newPos < 0){
 		std::cout << "Warning: [NetworkMessage::RSA_decrypt()]. Not valid packet size" << std::endl;
 		return false;
 	}
 	
-	RSA* rsa = RSA::getInstance();
-	if(!rsa->decrypt((char*)(m_MsgBuf + m_ReadPos), 128)){
+	if(!m_RSA){
+		std::cout << "Warning: [NetworkMessage::RSA_decrypt()]. m_RSA no set" << std::endl;
 		return false;
 	}
 	
-	if(GetByte() != 0){
-		std::cout << "Warning: [NetworkMessage::RSA_decrypt()]. First byte != 0" << std::endl;
+	if(!m_RSA->encrypt((char*)(m_MsgBuf + newPos), 128)){
 		return false;
 	}
-	*/
+	
 	return true;
 }

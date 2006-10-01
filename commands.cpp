@@ -1,5 +1,5 @@
 //////////////////////////////////////////////////////////////////////
-// OTAdmin
+// OTAdmin - OpenTibia
 //////////////////////////////////////////////////////////////////////
 //
 //////////////////////////////////////////////////////////////////////
@@ -23,13 +23,14 @@
 
 #include "commands.h"
 #include "networkmessage.h"
+#include "rsa.h"
 
 extern long next_command_delay;
 extern SOCKET g_socket;
 extern bool g_connected;
 
 bool sendCommand(char commandByte, char* command);
-bool sendMsg(NetworkMessage& msg);
+bool sendMsg(NetworkMessage& msg, uint32_t* key = NULL);
 
 std::string serverHost;
 uint16_t serverPort;
@@ -84,8 +85,8 @@ int cmdConnect(char* params)
 			closesocket(g_socket);
 			std::cerr << "[connect] can not resolve server host" << std::endl;
 			return -1;
-        }
-    }
+		}
+	}
 
 	sockaddr_in serveraddr;
 	serveraddr.sin_family = AF_INET;
@@ -124,36 +125,132 @@ int cmdConnect(char* params)
 	msg.GetU32();
 	std::string strversion = msg.GetString();
 	std::cout << "Hello from " << strversion << std::endl ;
-	msg.GetU16();
-	msg.GetU32();
+	uint16_t security = msg.GetU16();
+	uint32_t options = msg.GetU32();
 
-	//handle encryption
-	//....
+	//set encryption
+	if(security & REQUIRE_ENCRYPTION){
+		if(options & ENCRYPTION_RSA1024XTEA){
+			//get public key
+			msg.Reset();
+			msg.AddByte(AP_MSG_KEY_EXCHANGE);
+			msg.AddByte(ENCRYPTION_RSA1024XTEA);
 
+			if(!sendMsg(msg)){
+				closesocket(g_socket);
+				std::cerr << "[connect] error while getting public key"<< std::endl;
+				return -1;
+			}
+
+			char ret_code = msg.GetByte();
+			if(ret_code == AP_MSG_KEY_EXCHANGE_OK){
+				std::cout << "Key exchange OK" << std::endl;
+			}
+			else if(ret_code == AP_MSG_KEY_EXCHANGE_FAILED){
+				std::string error_desc = msg.GetString();
+				closesocket(g_socket);
+				std::cerr << "[connect] can not get public key: " << error_desc << std::endl;
+				return -1;
+			}
+			else{
+				closesocket(g_socket);
+				std::cerr << "[connect] not known response to key exchange request" << std::endl;
+				return -1;
+			}
+
+			unsigned char key_type = msg.GetByte();
+			if(key_type != ENCRYPTION_RSA1024XTEA){
+				closesocket(g_socket);
+				std::cerr << "[connect] no valid key returned" << std::endl;
+				return -1;
+			}
+			
+			//the public key is 128 bytes
+			uint32_t rsa_mod[32];
+			for(unsigned int i = 0; i < 32; ++i){
+				rsa_mod[i] = msg.GetU32();
+			}
+			RSA::getInstance()->setPublicKey((char*)rsa_mod, "65537");
+
+			
+			uint32_t random_key[32];
+			for(unsigned int i = 0; i < 32; ++i){
+				random_key[i] = 0x1111112;
+			}
+			
+			msg.setRSAInstance(RSA::getInstance());
+			msg.Reset();
+			msg.AddByte(AP_MSG_ENCRYPTION);
+			msg.AddByte(ENCRYPTION_RSA1024XTEA);
+			//build the 128 bytes block
+			msg.AddByte(0);
+			for(unsigned int i = 0; i < 31; ++i){
+				msg.AddU32(random_key[i]);
+			}
+			msg.AddByte(0);
+			msg.AddByte(0);
+			msg.AddByte(0);
+			//
+			msg.RSA_encrypt();
+
+			if(!sendMsg(msg, random_key)){
+				closesocket(g_socket);
+				std::cerr << "[connect] error while sending private key"<< std::endl;
+				return -1;
+			}
+
+			ret_code = msg.GetByte();
+			if(ret_code == AP_MSG_ENCRYPTION_OK){
+				std::cout << "Encryption OK" << std::endl;
+			}
+			else if(ret_code == AP_MSG_ENCRYPTION_FAILED){
+				std::string error_desc = msg.GetString();
+				closesocket(g_socket);
+				std::cerr << "[connect] can not set private key: " << error_desc << std::endl;
+				return -1;
+			}
+			else{
+				closesocket(g_socket);
+				std::cerr << "[connect] not known response to set private key request" << std::endl;
+				return -1;
+			}
+			
+		}
+		else{
+			closesocket(g_socket);
+			std::cerr << "[connect] can not initiate encryption"<< std::endl;
+			return -1;
+		}
+	}
+
+	
 	//login
-	msg.Reset();
-	msg.AddByte(AP_MSG_LOGIN);
-	msg.AddString(std::string(password));
+	if(security & REQUIRE_LOGIN){
+		msg.Reset();
+		msg.AddByte(AP_MSG_LOGIN);
+		msg.AddString(std::string(password));
 
-	if(!sendMsg(msg)){
-		closesocket(g_socket);
-		std::cerr << "[connect] error while sending login"<< std::endl;
-		return -1;
-	}
+		if(!sendMsg(msg)){
+			closesocket(g_socket);
+			std::cerr << "[connect] error while sending login"<< std::endl;
+			return -1;
+		}
 
-	char ret_code = msg.GetByte();
-	if(ret_code == AP_MSG_LOGIN_OK){
-		std::cout << "Login OK" << std::endl;
-	}
-	else if(ret_code == AP_MSG_LOGIN_FAILED){
-		std::string error_desc = msg.GetString();
-		closesocket(g_socket);
-		std::cerr << "[connect] can not login: " << error_desc << std::endl;
-		return -1;
-	}
-	else{
-
-		return -1;
+		char ret_code = msg.GetByte();
+		if(ret_code == AP_MSG_LOGIN_OK){
+			std::cout << "Login OK" << std::endl;
+		}
+		else if(ret_code == AP_MSG_LOGIN_FAILED){
+			std::string error_desc = msg.GetString();
+			closesocket(g_socket);
+			std::cerr << "[connect] can not login: " << error_desc << std::endl;
+			return -1;
+		}
+		else{
+			closesocket(g_socket);
+			std::cerr << "[connect] not known response to login request" << std::endl;
+			return -1;
+		}
 	}
 
 	g_connected = true;
@@ -333,7 +430,7 @@ bool sendCommand(char commandByte, char* command)
 	}
 }
 
-bool sendMsg(NetworkMessage& msg)
+bool sendMsg(NetworkMessage& msg, uint32_t* key /*= NULL*/)
 {
 #if defined WIN32 || defined __WINDOWS__
 	// Set the socket I/O mode; iMode = 0 for blocking; iMode != 0 for non-blocking
@@ -353,6 +450,10 @@ bool sendMsg(NetworkMessage& msg)
 	msg.Reset();
 
 	if(ret){
+		if(key){
+			msg.setEncryptionState(true);
+			msg.setEncryptionKey(key);
+		}
 		if(!msg.ReadFromSocket(g_socket)){
 			std::cerr << "[sendMsg] error while reading" << std::endl;
 			ret = false;

@@ -18,70 +18,59 @@
 // Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 //////////////////////////////////////////////////////////////////////
 
-#ifndef __OTADMIN_DEFINITIONS_H__
-#define __OTADMIN_DEFINITIONS_H__
 
-#define NETWORKMESSAGE_MAXSIZE 16768
+#include "rsa.h"
+#include "stdio.h"
+#include <string>
 
-#if defined WIN32 || defined __WINDOWS__
+RSA* RSA::instance = NULL;
 
-#pragma comment( lib, "Ws2_32.lib" )
-
-#include "windows.h"
-
-#define EWOULDBLOCK WSAEWOULDBLOCK
-
-typedef unsigned long uint32_t;
-typedef signed long int32_t;
-typedef unsigned short uint16_t;
-typedef unsigned char uint8_t;
-
-inline void OTSYS_SLEEP(uint32_t t){
-	Sleep(t);
-}
-
-
-#else
-
-#include <time.h>
-#include <sys/timeb.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <netdb.h>
-#include <stdint.h>
-#include <errno.h>
-#include <unistd.h>
-#include <fcntl.h>
-
-#ifndef SOCKET
-#define SOCKET int
-#endif
-
-#ifndef closesocket
-#define closesocket close
-#endif
-
-#ifndef SOCKADDR
-#define SOCKADDR sockaddr
-#endif
-
-#ifndef SOCKET_ERROR
-#define SOCKET_ERROR -1
-#endif
-
-#ifndef min
-#define min std::min
-#endif
-
-inline void OTSYS_SLEEP(int t)
+RSA* RSA::getInstance()
 {
-	timespec tv;
-	tv.tv_sec  = t / 1000;
-	tv.tv_nsec = (t % 1000)*1000000;
-	nanosleep(&tv, NULL);
+	if(!instance){
+		instance = new RSA();
+	}
+	return instance;	
 }
 
-#endif
+RSA::RSA()
+{
+	m_keySet = false;
+	mpz_init2(m_mod, 1024);
+	mpz_init2(m_e, 1024);
+}
 
-#endif
+RSA::~RSA()
+{
+	mpz_clear(m_mod);
+	mpz_clear(m_e);
+}
+
+
+//m as binary
+//e as string
+void RSA::setPublicKey(char* m, const std::string& e)
+{
+	mpz_import(m_mod, 128, 1, 1, 0, 0, m);
+	mpz_set_str(m_e, e.c_str(), 10);
+}
+
+bool RSA::encrypt(char* msg, long size)
+{	
+	mpz_t plain,c;
+	mpz_init2(plain, 1024);
+	mpz_init2(c, 1024);
+
+	mpz_import(plain, 128, 1, 1, 0, 0, msg);
+
+	mpz_powm(c, plain, m_e, m_mod);
+	
+		
+	size_t count = (mpz_sizeinbase(c, 2) + 7)/8;
+	memset(msg, 0, 128 - count);
+	mpz_export(&msg[128 - count], NULL, 1, 1, 0, 0, c);
+	
+	mpz_clear(c);
+	mpz_clear(plain);
+	return true;
+}

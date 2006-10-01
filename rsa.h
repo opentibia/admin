@@ -18,70 +18,31 @@
 // Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 //////////////////////////////////////////////////////////////////////
 
-#ifndef __OTADMIN_DEFINITIONS_H__
-#define __OTADMIN_DEFINITIONS_H__
 
-#define NETWORKMESSAGE_MAXSIZE 16768
+#ifndef __OTSERV_RSA_H__
+#define __OTSERV_RSA_H__
 
-#if defined WIN32 || defined __WINDOWS__
+#include "definitions.h"
+#include <string>
+#include "stdio.h"
+#include "gmp.h"
 
-#pragma comment( lib, "Ws2_32.lib" )
+class RSA{
+public:
+	~RSA();
 
-#include "windows.h"
+	static RSA* getInstance();
+	
+	void setPublicKey(char* m, const std::string& e);
+	bool encrypt(char* msg,long size);
+	
+protected:
+	RSA();
 
-#define EWOULDBLOCK WSAEWOULDBLOCK
-
-typedef unsigned long uint32_t;
-typedef signed long int32_t;
-typedef unsigned short uint16_t;
-typedef unsigned char uint8_t;
-
-inline void OTSYS_SLEEP(uint32_t t){
-	Sleep(t);
-}
-
-
-#else
-
-#include <time.h>
-#include <sys/timeb.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <netdb.h>
-#include <stdint.h>
-#include <errno.h>
-#include <unistd.h>
-#include <fcntl.h>
-
-#ifndef SOCKET
-#define SOCKET int
-#endif
-
-#ifndef closesocket
-#define closesocket close
-#endif
-
-#ifndef SOCKADDR
-#define SOCKADDR sockaddr
-#endif
-
-#ifndef SOCKET_ERROR
-#define SOCKET_ERROR -1
-#endif
-
-#ifndef min
-#define min std::min
-#endif
-
-inline void OTSYS_SLEEP(int t)
-{
-	timespec tv;
-	tv.tv_sec  = t / 1000;
-	tv.tv_nsec = (t % 1000)*1000000;
-	nanosleep(&tv, NULL);
-}
-
-#endif
+	static RSA* instance;
+	bool m_keySet;
+	
+	mpz_t m_mod, m_e;
+};
 
 #endif
