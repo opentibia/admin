@@ -127,7 +127,7 @@ int cmdConnect(char* params)
 	uint16_t security = msg.GetU16();
 	uint32_t options = msg.GetU32();
 	if(security & REQUIRE_ENCRYPTION){
-		strversion = strversion + " encrypion";
+		strversion = strversion + " encryption";
 		if(options & ENCRYPTION_RSA1024XTEA){
 			strversion = strversion + "(RSA1024XTEA)";
 		}
