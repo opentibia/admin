@@ -40,6 +40,10 @@ int setServer(char* params)
 {
 	char host[256];
 	int port;
+	if(!params){
+		std::cerr << "[server] missing parameters" << std::endl;
+		return -1;
+	}
 	if(strlen(params) > 255){
 		std::cerr << "[server] too long host and port" << std::endl;
 		return -1;
@@ -63,6 +67,11 @@ int cmdConnect(char* params)
 		return -1;
 	}
 
+	if(!params){
+		std::cerr << "[connect] missing parameters" << std::endl;
+		return -1;
+	}
+
 	char password[128];
 	if(strlen(params) > 127){
 		std::cerr << "[connect] too long password" << std::endl;
@@ -83,7 +92,7 @@ int cmdConnect(char* params)
 		}
 		else{
 			closesocket(g_socket);
-			std::cerr << "[connect] can not resolve server host" << std::endl;
+			std::cerr << "[connect] can not resolve server: " << serverHost << " - " << WSAGetLastError() << std::endl;
 			return -1;
 		}
 	}
@@ -95,7 +104,7 @@ int cmdConnect(char* params)
 
 	if(connect(g_socket, (SOCKADDR*)&serveraddr, sizeof(serveraddr)) == SOCKET_ERROR){
 		closesocket(g_socket);
-		std::cerr << "[connect] can not connect to server " << serverHost << std::endl;
+		std::cerr << "[connect] can not connect to server: " << serverHost << " - " << WSAGetLastError() << std::endl;
 		return -1;
 	}
 	std::cout << "Connected to " << serverHost << std::endl;
@@ -104,7 +113,7 @@ int cmdConnect(char* params)
 	msg.AddByte(0xFE);
 	if(!msg.WriteToSocket(g_socket)){
 		closesocket(g_socket);
-		std::cerr << "[connect] error while sending first byte"<< std::endl;
+		std::cerr << "[connect] error while sending first byte - " << WSAGetLastError() << std::endl;
 		return -1;
 	}
 	msg.Reset();
@@ -112,14 +121,14 @@ int cmdConnect(char* params)
 
 	if(!msg.ReadFromSocket(g_socket)){
 		closesocket(g_socket);
-		std::cerr << "[connect] error while reading hello"<< std::endl;
+		std::cerr << "[connect] error while reading hello - " << WSAGetLastError() << std::endl;
 		return -1;
 	}
 
 	char byte = msg.GetByte();
 	if(byte != AP_MSG_HELLO){
 		closesocket(g_socket);
-		std::cerr << "[connect] no valid server hello"<< std::endl;
+		std::cerr << "[connect] no valid server hello" << std::endl;
 		return -1;
 	}
 	msg.GetU32();
@@ -150,7 +159,7 @@ int cmdConnect(char* params)
 
 			if(!sendMsg(msg)){
 				closesocket(g_socket);
-				std::cerr << "[connect] error while getting public key"<< std::endl;
+				std::cerr << "[connect] error while getting public key" << std::endl;
 				return -1;
 			}
 
@@ -187,7 +196,7 @@ int cmdConnect(char* params)
 			
 			uint32_t random_key[32];
 			for(unsigned int i = 0; i < 32; ++i){
-				random_key[i] = 0x1111112;
+				random_key[i] = rand() << 16 ^ rand();
 			}
 			
 			msg.setRSAInstance(RSA::getInstance());
@@ -207,7 +216,7 @@ int cmdConnect(char* params)
 
 			if(!sendMsg(msg, random_key)){
 				closesocket(g_socket);
-				std::cerr << "[connect] error while sending private key"<< std::endl;
+				std::cerr << "[connect] error while sending private key" << std::endl;
 				return -1;
 			}
 
@@ -230,7 +239,7 @@ int cmdConnect(char* params)
 		}
 		else{
 			closesocket(g_socket);
-			std::cerr << "[connect] can not initiate encryption"<< std::endl;
+			std::cerr << "[connect] can not initiate encryption" << std::endl;
 			return -1;
 		}
 	}
@@ -244,7 +253,7 @@ int cmdConnect(char* params)
 
 		if(!sendMsg(msg)){
 			closesocket(g_socket);
-			std::cerr << "[connect] error while sending login"<< std::endl;
+			std::cerr << "[connect] error while sending login" << std::endl;
 			return -1;
 		}
 
@@ -274,8 +283,12 @@ int cmdConnect(char* params)
 int cmdDisconnect(char* params)
 {
 	if(g_connected != true){
-		std::cerr << "[disconnect] no connected"<< std::endl;
+		std::cerr << "[disconnect] no connected" << std::endl;
 		return 1;
+	}
+	
+	if(params){
+		std::cerr << "[disconnect] Warning: parameters ignored" << std::endl;
 	}
 
 	closesocket(g_socket);
@@ -289,6 +302,11 @@ int cmdDisconnect(char* params)
 //sleep 10000
 int sleep(char* params)
 {
+	if(!params){
+		std::cerr << "[sleep] missing parameter" << std::endl;
+		return -1;
+	}
+	
 	int delay;
 	if(sscanf(params, "%d", &delay) != 1){
 		std::cerr << "[sleep] no valid delay" << std::endl;
@@ -305,18 +323,18 @@ int sleep(char* params)
 int commandBroadcast(char* params)
 {
 	if(g_connected != true){
-		std::cerr << "[broadcast] no connected"<< std::endl;
+		std::cerr << "[broadcast] no connected" << std::endl;
 		return -1;
 	}
 
 	if(!params){
-		std::cerr << "[broadcast] no params"<< std::endl;
+		std::cerr << "[broadcast] missing parameters" << std::endl;
 		return -1;
 	}
 
 	long n = strlen(params);
 	if(n > 127 || n == 0){
-		std::cerr << "[broadcast] no valid params"<< std::endl;
+		std::cerr << "[broadcast] no valid parameters" << std::endl;
 		return -1;
 	}
 
@@ -326,7 +344,7 @@ int commandBroadcast(char* params)
 	std::cout << "Broadcast: " << message << std::endl;
 
 	if(!sendCommand(CMD_BROADCAST, message)){
-		std::cerr << "[broadcast] error sending broadcast"<< std::endl;
+		std::cerr << "[broadcast] error sending broadcast" << std::endl;
 		return -1;
 	}
 
@@ -337,19 +355,18 @@ int commandBroadcast(char* params)
 int commandCloseServer(char* params)
 {
 	if(g_connected != true){
-		std::cerr << "[closeserver] no connected"<< std::endl;
+		std::cerr << "[closeserver] no connected" << std::endl;
 		return -1;
 	}
 
 	if(params){
-		std::cerr << "[closeserver] Warning: params ignored"<< std::endl;
+		std::cerr << "[closeserver] Warning: parameters ignored" << std::endl;
 	}
-
 
 	std::cout << "Closing server." << std::endl;
 
 	if(!sendCommand(CMD_CLOSE_SERVER, NULL)){
-		std::cerr << "[closeserver] error closing server"<< std::endl;
+		std::cerr << "[closeserver] error closing server" << std::endl;
 		return -1;
 	}
 
@@ -360,19 +377,18 @@ int commandCloseServer(char* params)
 int commandShutdown(char* params)
 {
 	if(g_connected != true){
-		std::cerr << "[shutdown] no connected"<< std::endl;
+		std::cerr << "[shutdown] no connected" << std::endl;
 		return -1;
 	}
 
 	if(params){
-		std::cerr << "[shutdown] Warning: params ignored"<< std::endl;
+		std::cerr << "[shutdown] Warning: parameters ignored" << std::endl;
 	}
-
 
 	std::cout << "Server shutdown." << std::endl;
 
 	if(!sendCommand(CMD_SHUTDOWN_SERVER, NULL)){
-		std::cerr << "[shutdown] error in server shutdown"<< std::endl;
+		std::cerr << "[shutdown] error in server shutdown" << std::endl;
 		return -1;
 	}
 
@@ -384,21 +400,25 @@ int commandShutdown(char* params)
 int ping(char* params)
 {
 	if(g_connected != true){
-		std::cerr << "[ping] no connected"<< std::endl;
+		std::cerr << "[ping] no connected" << std::endl;
 		return -1;
+	}
+	
+	if(params){
+		std::cerr << "[ping] Warning: parameters ignored" << std::endl;
 	}
 
 	NetworkMessage msg;
 	msg.AddByte(AP_MSG_PING);
 
 	if(!sendMsg(msg)){
-		std::cerr << "[ping] error sending ping"<< std::endl;
+		std::cerr << "[ping] error sending ping" << std::endl;
 		return -1;
 	}
 
 	char ret_code = msg.GetByte();
 	if(ret_code != AP_MSG_PING_OK){
-		std::cerr << "[ping] no valid ping"<< std::endl;
+		std::cerr << "[ping] no valid ping" << std::endl;
 		return -1;
 	}
 	return 1;
@@ -437,7 +457,7 @@ bool sendCommand(char commandByte, char* command)
 		return false;
 	}
 	else{
-		std::cerr << "[sendCommand] no known return code"<< std::endl;
+		std::cerr << "[sendCommand] no known return code" << std::endl;
 		return false;
 	}
 }
@@ -455,7 +475,7 @@ bool sendMsg(NetworkMessage& msg, uint32_t* key /*= NULL*/)
 	bool ret = true;
 
 	if(!msg.WriteToSocket(g_socket)){
-		std::cerr << "[sendMsg] error while sending" << std::endl;
+		std::cerr << "[sendMsg] error while sending - " << WSAGetLastError() << std::endl;
 		ret = false;
 	}
 
@@ -467,7 +487,7 @@ bool sendMsg(NetworkMessage& msg, uint32_t* key /*= NULL*/)
 			msg.setEncryptionKey(key);
 		}
 		if(!msg.ReadFromSocket(g_socket)){
-			std::cerr << "[sendMsg] error while reading" << std::endl;
+			std::cerr << "[sendMsg] error while reading - " << WSAGetLastError() << std::endl;
 			ret = false;
 		}
 		else{

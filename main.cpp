@@ -54,8 +54,17 @@ int main()
 	if(WSAStartup(MAKEWORD(2,2), &wsd) != 0){
 		return 1;
 	}
-#endif
+	
+	LARGE_INTEGER counter;
+	QueryPerformanceCounter(&counter);
+	srand(counter.LowPart);
+	
+#else
 
+	srand(time(NULL));
+#endif
+	
+	
 	disconnect_function = getCommand("disconnect", true);
 	ping_function = getCommand("ping", true);
 
