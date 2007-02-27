@@ -35,6 +35,13 @@ bool sendMsg(NetworkMessage& msg, uint32_t* key = NULL);
 std::string serverHost;
 uint16_t serverPort;
 
+#if defined WIN32 || defined __WINDOWS__
+#define ERROR_SOCKET WSAGetLastError()
+#else
+#include <errno.h>
+#define ERROR_SOCKET errno
+#endif
+
 //server localhost 7171
 int setServer(char* params)
 {
@@ -92,7 +99,7 @@ int cmdConnect(char* params)
 		}
 		else{
 			closesocket(g_socket);
-			std::cerr << "[connect] can not resolve server: " << serverHost << " - " << WSAGetLastError() << std::endl;
+			std::cerr << "[connect] can not resolve server: " << serverHost << " - " << ERROR_SOCKET << std::endl;
 			return -1;
 		}
 	}
@@ -104,7 +111,7 @@ int cmdConnect(char* params)
 
 	if(connect(g_socket, (SOCKADDR*)&serveraddr, sizeof(serveraddr)) == SOCKET_ERROR){
 		closesocket(g_socket);
-		std::cerr << "[connect] can not connect to server: " << serverHost << " - " << WSAGetLastError() << std::endl;
+		std::cerr << "[connect] can not connect to server: " << serverHost << " - " << ERROR_SOCKET << std::endl;
 		return -1;
 	}
 	std::cout << "Connected to " << serverHost << std::endl;
@@ -113,7 +120,7 @@ int cmdConnect(char* params)
 	msg.AddByte(0xFE);
 	if(!msg.WriteToSocket(g_socket)){
 		closesocket(g_socket);
-		std::cerr << "[connect] error while sending first byte - " << WSAGetLastError() << std::endl;
+		std::cerr << "[connect] error while sending first byte - " << ERROR_SOCKET << std::endl;
 		return -1;
 	}
 	msg.Reset();
@@ -121,7 +128,7 @@ int cmdConnect(char* params)
 
 	if(!msg.ReadFromSocket(g_socket)){
 		closesocket(g_socket);
-		std::cerr << "[connect] error while reading hello - " << WSAGetLastError() << std::endl;
+		std::cerr << "[connect] error while reading hello - " << ERROR_SOCKET << std::endl;
 		return -1;
 	}
 
@@ -475,7 +482,7 @@ bool sendMsg(NetworkMessage& msg, uint32_t* key /*= NULL*/)
 	bool ret = true;
 
 	if(!msg.WriteToSocket(g_socket)){
-		std::cerr << "[sendMsg] error while sending - " << WSAGetLastError() << std::endl;
+		std::cerr << "[sendMsg] error while sending - " << ERROR_SOCKET << std::endl;
 		ret = false;
 	}
 
@@ -487,7 +494,7 @@ bool sendMsg(NetworkMessage& msg, uint32_t* key /*= NULL*/)
 			msg.setEncryptionKey(key);
 		}
 		if(!msg.ReadFromSocket(g_socket)){
-			std::cerr << "[sendMsg] error while reading - " << WSAGetLastError() << std::endl;
+			std::cerr << "[sendMsg] error while reading - " << ERROR_SOCKET << std::endl;
 			ret = false;
 		}
 		else{
