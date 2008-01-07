@@ -19,6 +19,8 @@
 //////////////////////////////////////////////////////////////////////
 
 #include <iostream>
+#include <fstream>
+#include <sstream>
 #include <stdio.h>
 #include <list>
 
@@ -47,7 +49,7 @@ bool g_connected = false;
 CommandFunc disconnect_function;
 CommandFunc ping_function;
 
-int main()
+int main(int argc, char* argv[])
 {
 #if defined WIN32 || defined __WINDOWS__
 	WSADATA wsd;
@@ -71,9 +73,20 @@ int main()
 	char command[1024];
 	long lineCounter = 0;
 	long exit_code = 0;
-	while(!std::cin.eof()){
+	
+	std::stringstream is;
+	if(argc > 1){
+		for(int i = 1; i < argc; ++i){
+			is << argv[i] << std::endl;
+		}
+	}
+	else{
+		is << std::cin.rdbuf();
+	}
+
+	while(!is.eof()){
 		lineCounter++;
-		std::cin.getline(command, 1024);
+		is.getline(command, 1024);
 		if(strcmp(command, "") != 0){
 			//comments line
 			if(command[0] == '#'){

@@ -21,7 +21,12 @@
 #ifndef __OTADMIN_DEFINITIONS_H__
 #define __OTADMIN_DEFINITIONS_H__
 
-#include "stdint.h"
+#if defined __WINDOWS__ || defined WIN32
+
+#else
+	#include "stdint.h"
+#endif
+
 #define NETWORKMESSAGE_MAXSIZE 16768
 
 #if defined WIN32 || defined __WINDOWS__
