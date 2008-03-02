@@ -7,7 +7,7 @@
 // modify it under the terms of the GNU General Public License
 // as published by the Free Software Foundation; either version 2
 // of the License, or (at your option) any later version.
-// 
+//
 // This program is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
@@ -192,7 +192,7 @@ int cmdConnect(char* params)
 				std::cerr << "[connect] no valid key returned" << std::endl;
 				return -1;
 			}
-			
+
 			//the public key is 128 bytes
 			uint32_t rsa_mod[32];
 			for(unsigned int i = 0; i < 32; ++i){
@@ -200,12 +200,12 @@ int cmdConnect(char* params)
 			}
 			RSA::getInstance()->setPublicKey((char*)rsa_mod, "65537");
 
-			
+
 			uint32_t random_key[32];
 			for(unsigned int i = 0; i < 32; ++i){
 				random_key[i] = rand() << 16 ^ rand();
 			}
-			
+
 			msg.setRSAInstance(RSA::getInstance());
 			msg.Reset();
 			msg.AddByte(AP_MSG_ENCRYPTION);
@@ -242,7 +242,7 @@ int cmdConnect(char* params)
 				std::cerr << "[connect] not known response to set private key request" << std::endl;
 				return -1;
 			}
-			
+
 		}
 		else{
 			closesocket(g_socket);
@@ -251,7 +251,7 @@ int cmdConnect(char* params)
 		}
 	}
 
-	
+
 	//login
 	if(security & REQUIRE_LOGIN){
 		msg.Reset();
@@ -293,7 +293,7 @@ int cmdDisconnect(char* params)
 		std::cerr << "[disconnect] no connected" << std::endl;
 		return 1;
 	}
-	
+
 	if(params){
 		std::cerr << "[disconnect] Warning: parameters ignored" << std::endl;
 	}
@@ -313,7 +313,7 @@ int sleep(char* params)
 		std::cerr << "[sleep] missing parameter" << std::endl;
 		return -1;
 	}
-	
+
 	int delay;
 	if(sscanf(params, "%d", &delay) != 1){
 		std::cerr << "[sleep] no valid delay" << std::endl;
@@ -402,6 +402,28 @@ int commandShutdown(char* params)
 	return 1;
 }
 
+//payhouses
+int commandPayHouses(char* params)
+{
+	if(g_connected != true){
+		std::cerr << "[payhouses] no connected" << std::endl;
+		return -1;
+	}
+
+	if(params){
+		std::cerr << "[payhouses] Warning: parameters ignored" << std::endl;
+	}
+
+	std::cout << "Paying houses." << std::endl;
+
+	if(!sendCommand(CMD_PAY_HOUSES, NULL)){
+		std::cerr << "[payhouses] error in server shutdown" << std::endl;
+		return -1;
+	}
+
+	return 1;
+}
+
 
 //internal use
 int ping(char* params)
@@ -410,7 +432,7 @@ int ping(char* params)
 		std::cerr << "[ping] no connected" << std::endl;
 		return -1;
 	}
-	
+
 	if(params){
 		std::cerr << "[ping] Warning: parameters ignored" << std::endl;
 	}
@@ -528,6 +550,7 @@ defcommands commands[] = {
 	{"broadcast", &commandBroadcast},
 	{"closeserver", &commandCloseServer},
 	{"shutdown", &commandShutdown},
+	{"payhouses", &commandPayHouses},
 	{"disconnect", &cmdDisconnect},
 	{"LAST", &last},
 	//internal commands
