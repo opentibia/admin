@@ -50,6 +50,8 @@ inline void OTSYS_SLEEP(uint32_t t){
 
 #else
 
+#include <string.h>
+#include <stdlib.h>
 #include <time.h>
 #include <sys/timeb.h>
 #include <sys/socket.h>

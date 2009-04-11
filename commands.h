@@ -21,6 +21,8 @@
 #ifndef __OTADMIN_COMMANDS_H__
 #define __OTADMIN_COMMANDS_H__
 
+#include "definitions.h"
+
 typedef int (*CommandFunc)(char* params);
 
 struct defcommands{
