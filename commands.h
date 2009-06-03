@@ -68,6 +68,7 @@ enum{
 	//CMD_BAN_MANAGER = 10,
 	//CMD_SERVER_INFO = 11,
 	//CMD_GETHOUSE = 12,
+	CMD_SAVE_SERVER = 13,
 };
 
 

@@ -402,6 +402,28 @@ int commandShutdown(char* params)
 	return 1;
 }
 
+//saveserver
+int cmdSaveServer(char* params)
+{
+	if(g_connected != true){
+		std::cerr << "[saveserver] no connected" << std::endl;
+		return -1;
+	}
+
+	if(params){
+		std::cerr << "[saveserver] Warning: parameters ignored" << std::endl;
+	}
+
+	std::cout << "Saving server." << std::endl;
+
+	if(!sendCommand(CMD_SAVE_SERVER, NULL)){
+		std::cerr << "[saveserver] error in server save" << std::endl;
+		return -1;
+	}
+
+	return 1;
+}
+
 //payhouses
 int commandPayHouses(char* params)
 {
@@ -549,6 +571,7 @@ defcommands commands[] = {
 	{"sleep", &sleep},
 	{"broadcast", &commandBroadcast},
 	{"closeserver", &commandCloseServer},
+	{"saveserver", &cmdSaveServer},
 	{"shutdown", &commandShutdown},
 	{"payhouses", &commandPayHouses},
 	{"disconnect", &cmdDisconnect},
