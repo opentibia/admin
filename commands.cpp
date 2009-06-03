@@ -287,7 +287,7 @@ int cmdConnect(char* params)
 }
 
 //disconnect
-int cmdDisconnect(char* params)
+int commandDisconnect(char* params)
 {
 	if(g_connected != true){
 		std::cerr << "[disconnect] no connected" << std::endl;
@@ -403,7 +403,7 @@ int commandShutdown(char* params)
 }
 
 //saveserver
-int cmdSaveServer(char* params)
+int commandSaveServer(char* params)
 {
 	if(g_connected != true){
 		std::cerr << "[saveserver] no connected" << std::endl;
@@ -418,6 +418,33 @@ int cmdSaveServer(char* params)
 
 	if(!sendCommand(CMD_SAVE_SERVER, NULL)){
 		std::cerr << "[saveserver] error in server save" << std::endl;
+		return -1;
+	}
+
+	return 1;
+}
+
+//kickplayer
+int commandKickPlayer(char* params)
+{
+	if(g_connected != true){
+		std::cerr << "[kickplayer] no connected" << std::endl;
+		return -1;
+	}
+
+	long n = strlen(params);
+	if(n > 127 || n == 0){
+		std::cerr << "[kickplayer] no valid parameters" << std::endl;
+		return -1;
+	}
+
+	char player[128];
+	strcpy(player, params);
+
+	std::cout << "Kicking player." << std::endl;
+
+	if(!sendCommand(CMD_KICK, player)){
+		std::cerr << "[kickplayer] error while kicking player" << std::endl;
 		return -1;
 	}
 
@@ -571,10 +598,10 @@ defcommands commands[] = {
 	{"sleep", &sleep},
 	{"broadcast", &commandBroadcast},
 	{"closeserver", &commandCloseServer},
-	{"saveserver", &cmdSaveServer},
+	{"saveserver", &commandSaveServer},
 	{"shutdown", &commandShutdown},
 	{"payhouses", &commandPayHouses},
-	{"disconnect", &cmdDisconnect},
+	{"disconnect", &commandDisconnect},
 	{"LAST", &last},
 	//internal commands
 	{"ping", &ping},
