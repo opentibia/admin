@@ -7,7 +7,7 @@ sleep 15000
 broadcast Closing server
 sleep 5000
 closeserver
-serversave
+saveserver
 payhouses
 shutdown
 disconnect
