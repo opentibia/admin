@@ -153,7 +153,7 @@ int main(int argc, char* argv[])
 				break;
 			}
 		}
-		if(last_ping > 40000){
+		if(last_ping > 20000){
 			//send ping here
 			ping_function(NULL);
 			last_ping = 0;
