@@ -29,8 +29,10 @@ extern long next_command_delay;
 extern SOCKET g_socket;
 extern bool g_connected;
 
-bool sendCommand(char commandByte, char* command);
-bool sendMsg(NetworkMessage& msg, uint32_t* key = NULL);
+int sendCommand(char commandByte, char* command);
+
+void setSocketMode(bool blocking);
+SocketCode sendMsg(NetworkMessage& msg, uint32_t* key = NULL);
 
 std::string serverHost;
 uint16_t serverPort;
@@ -67,7 +69,7 @@ int setServer(char* params)
 }
 
 //connect test
-int cmdConnect(char* params)
+int commandConnect(char* params)
 {
 	if(g_connected == true){
 		std::cerr << "[connect] already connected" << std::endl;
@@ -115,10 +117,11 @@ int cmdConnect(char* params)
 		return -1;
 	}
 	std::cout << "Connected to " << serverHost << std::endl;
+	setSocketMode(false);
 
 	NetworkMessage msg;
 	msg.AddByte(0xFE);
-	if(!msg.WriteToSocket(g_socket)){
+	if(msg.WriteToSocket(g_socket) != SOCKET_CODE_OK){
 		closesocket(g_socket);
 		std::cerr << "[connect] error while sending first byte - " << ERROR_SOCKET << std::endl;
 		return -1;
@@ -126,7 +129,7 @@ int cmdConnect(char* params)
 	msg.Reset();
 	//read server hello
 
-	if(!msg.ReadFromSocket(g_socket)){
+	if(msg.ReadFromSocket(g_socket) != SOCKET_CODE_OK){
 		closesocket(g_socket);
 		std::cerr << "[connect] error while reading hello - " << ERROR_SOCKET << std::endl;
 		return -1;
@@ -164,7 +167,7 @@ int cmdConnect(char* params)
 			msg.AddByte(AP_MSG_KEY_EXCHANGE);
 			msg.AddByte(ENCRYPTION_RSA1024XTEA);
 
-			if(!sendMsg(msg)){
+			if(sendMsg(msg) != SOCKET_CODE_OK){
 				closesocket(g_socket);
 				std::cerr << "[connect] error while getting public key" << std::endl;
 				return -1;
@@ -221,7 +224,7 @@ int cmdConnect(char* params)
 			//
 			msg.RSA_encrypt();
 
-			if(!sendMsg(msg, random_key)){
+			if(sendMsg(msg, random_key) != SOCKET_CODE_OK){
 				closesocket(g_socket);
 				std::cerr << "[connect] error while sending private key" << std::endl;
 				return -1;
@@ -258,7 +261,7 @@ int cmdConnect(char* params)
 		msg.AddByte(AP_MSG_LOGIN);
 		msg.AddString(std::string(password));
 
-		if(!sendMsg(msg)){
+		if(sendMsg(msg) != SOCKET_CODE_OK){
 			closesocket(g_socket);
 			std::cerr << "[connect] error while sending login" << std::endl;
 			return -1;
@@ -290,7 +293,7 @@ int cmdConnect(char* params)
 int commandDisconnect(char* params)
 {
 	if(g_connected != true){
-		std::cerr << "[disconnect] no connected" << std::endl;
+		std::cerr << "[disconnect] not connected" << std::endl;
 		return 1;
 	}
 
@@ -330,7 +333,7 @@ int sleep(char* params)
 int commandBroadcast(char* params)
 {
 	if(g_connected != true){
-		std::cerr << "[broadcast] no connected" << std::endl;
+		std::cerr << "[broadcast] not connected" << std::endl;
 		return -1;
 	}
 
@@ -350,19 +353,20 @@ int commandBroadcast(char* params)
 
 	std::cout << "Broadcast: " << message << std::endl;
 
-	if(!sendCommand(CMD_BROADCAST, message)){
+	int ret = sendCommand(CMD_BROADCAST, message);
+	if(ret == -1){
 		std::cerr << "[broadcast] error sending broadcast" << std::endl;
 		return -1;
 	}
 
-	return 1;
+	return ret;
 }
 
 //closeserver
 int commandCloseServer(char* params)
 {
 	if(g_connected != true){
-		std::cerr << "[closeserver] no connected" << std::endl;
+		std::cerr << "[closeserver] not connected" << std::endl;
 		return -1;
 	}
 
@@ -372,19 +376,20 @@ int commandCloseServer(char* params)
 
 	std::cout << "Closing server." << std::endl;
 
-	if(!sendCommand(CMD_CLOSE_SERVER, NULL)){
+	int ret = sendCommand(CMD_CLOSE_SERVER, NULL);
+	if(ret == -1){
 		std::cerr << "[closeserver] error closing server" << std::endl;
 		return -1;
 	}
 
-	return 1;
+	return ret;
 }
 
 //shutdown
 int commandShutdown(char* params)
 {
 	if(g_connected != true){
-		std::cerr << "[shutdown] no connected" << std::endl;
+		std::cerr << "[shutdown] not connected" << std::endl;
 		return -1;
 	}
 
@@ -394,19 +399,20 @@ int commandShutdown(char* params)
 
 	std::cout << "Server shutdown." << std::endl;
 
-	if(!sendCommand(CMD_SHUTDOWN_SERVER, NULL)){
+	int ret = sendCommand(CMD_SHUTDOWN_SERVER, NULL);
+	if(ret == -1){
 		std::cerr << "[shutdown] error in server shutdown" << std::endl;
 		return -1;
 	}
 
-	return 1;
+	return ret;
 }
 
 //saveserver
 int commandSaveServer(char* params)
 {
 	if(g_connected != true){
-		std::cerr << "[saveserver] no connected" << std::endl;
+		std::cerr << "[saveserver] not connected" << std::endl;
 		return -1;
 	}
 
@@ -416,19 +422,20 @@ int commandSaveServer(char* params)
 
 	std::cout << "Saving server." << std::endl;
 
-	if(!sendCommand(CMD_SAVE_SERVER, NULL)){
+	int ret = sendCommand(CMD_SAVE_SERVER, NULL);
+	if(ret == -1){
 		std::cerr << "[saveserver] error in server save" << std::endl;
 		return -1;
 	}
 
-	return 1;
+	return ret;
 }
 
 //kickplayer
 int commandKickPlayer(char* params)
 {
 	if(g_connected != true){
-		std::cerr << "[kickplayer] no connected" << std::endl;
+		std::cerr << "[kickplayer] not connected" << std::endl;
 		return -1;
 	}
 
@@ -443,19 +450,20 @@ int commandKickPlayer(char* params)
 
 	std::cout << "Kicking player." << std::endl;
 
-	if(!sendCommand(CMD_KICK, player)){
+	int ret = sendCommand(CMD_KICK, player);
+	if(ret == -1){
 		std::cerr << "[kickplayer] error while kicking player" << std::endl;
 		return -1;
 	}
 
-	return 1;
+	return ret;
 }
 
 //payhouses
 int commandPayHouses(char* params)
 {
 	if(g_connected != true){
-		std::cerr << "[payhouses] no connected" << std::endl;
+		std::cerr << "[payhouses] not connected" << std::endl;
 		return -1;
 	}
 
@@ -465,20 +473,20 @@ int commandPayHouses(char* params)
 
 	std::cout << "Paying houses." << std::endl;
 
-	if(!sendCommand(CMD_PAY_HOUSES, NULL)){
+	int ret = sendCommand(CMD_PAY_HOUSES, NULL);
+	if(ret == -1){
 		std::cerr << "[payhouses] error in server shutdown" << std::endl;
 		return -1;
 	}
 
-	return 1;
+	return ret;
 }
-
 
 //internal use
 int ping(char* params)
 {
 	if(g_connected != true){
-		std::cerr << "[ping] no connected" << std::endl;
+		std::cerr << "[ping] not connected" << std::endl;
 		return -1;
 	}
 
@@ -489,9 +497,14 @@ int ping(char* params)
 	NetworkMessage msg;
 	msg.AddByte(AP_MSG_PING);
 
-	if(!sendMsg(msg)){
+	SocketCode ret = sendMsg(msg);
+	if(ret == SOCKET_CODE_ERROR){
 		std::cerr << "[ping] error sending ping" << std::endl;
 		return -1;
+	}
+
+	if(ret == SOCKET_CODE_TIMEOUT){
+		return 0;
 	}
 
 	char ret_code = msg.GetByte();
@@ -499,19 +512,19 @@ int ping(char* params)
 		std::cerr << "[ping] no valid ping" << std::endl;
 		return -1;
 	}
-	return 1;
+	return ret;
 }
 
 //dummy function
 int last(char* params)
 {
-	std::cout << "[last] you should not be here!!" << std::endl;
+	std::cout << "[last] you should not be here!" << std::endl;
 	return 1;
 }
 
 //help functions
 
-bool sendCommand(char commandByte, char* command)
+int sendCommand(char commandByte, char* command)
 {
 	NetworkMessage msg;
 	msg.AddByte(AP_MSG_COMMAND);
@@ -520,72 +533,123 @@ bool sendCommand(char commandByte, char* command)
 		msg.AddString(command);
 	}
 
-	if(!sendMsg(msg)){
+	SocketCode ret = sendMsg(msg);
+	if(ret == SOCKET_CODE_ERROR){
 		std::cerr << "[sendCommand] error while sending command" << std::endl;
-		return false;
+		return -1;
+	}
+
+	if(ret == SOCKET_CODE_TIMEOUT){
+		return 0;
 	}
 
 	char ret_code = msg.GetByte();
 	if(ret_code == AP_MSG_COMMAND_OK){
-		return true;
+		return 1;
 	}
 	else if(ret_code == AP_MSG_COMMAND_FAILED){
 		std::string error_desc = msg.GetString();
 		std::cerr << "[sendCommand] error: " << error_desc << std::endl;
-		return false;
+		return 0;
 	}
 	else{
 		std::cerr << "[sendCommand] no known return code" << std::endl;
-		return false;
+		return 0;
 	}
 }
 
-bool sendMsg(NetworkMessage& msg, uint32_t* key /*= NULL*/)
+void setSocketMode(bool blocking)
 {
 #if defined WIN32 || defined __WINDOWS__
 	// Set the socket I/O mode; iMode = 0 for blocking; iMode != 0 for non-blocking
-	unsigned long mode = 0;
+	unsigned long mode;
+	if(blocking){
+		mode = 0;
+	}
+	else{
+		mode = 1;
+	}
 	ioctlsocket(g_socket, FIONBIO, &mode);
 #else
 	int flags = fcntl(g_socket, F_GETFL);
-	fcntl(g_socket, F_SETFL, flags & (~O_NONBLOCK));
-#endif
-	bool ret = true;
-
-	if(!msg.WriteToSocket(g_socket)){
-		std::cerr << "[sendMsg] error while sending - " << ERROR_SOCKET << std::endl;
-		ret = false;
+	if(blocking){
+		flags &= (~O_NONBLOCK);
+	}
+	else{
+		flags |= O_NONBLOCK;
 	}
 
+	fcntl(g_socket, F_SETFL, flags);
+#endif
+}
+
+SocketCode sendMsg(NetworkMessage& msg, uint32_t* key /*= NULL*/)
+{
+	SocketCode ret = msg.WriteToSocket(g_socket);
 	msg.Reset();
 
-	if(ret){
+	if(ret == SOCKET_CODE_OK){
 		if(key){
 			msg.setEncryptionState(true);
 			msg.setEncryptionKey(key);
 		}
-		if(!msg.ReadFromSocket(g_socket)){
-			std::cerr << "[sendMsg] error while reading - " << ERROR_SOCKET << std::endl;
-			ret = false;
-		}
-		else{
+
+		ret = msg.ReadFromSocket(g_socket);
+		if(ret == SOCKET_CODE_OK){ 
 			char ret_code = msg.InspectByte();
 			if(ret_code == AP_MSG_ERROR){
 				msg.GetByte();
 				std::string error_desc = msg.GetString();
 				std::cerr << "[sendMsg] MSG_ERROR: " << error_desc << std::endl;
-				ret = false;
+				ret = SOCKET_CODE_ERROR;
 			}
 		}
+		else if(ret == SOCKET_CODE_ERROR){
+			std::cerr << "[sendMsg] error while reading - " << ERROR_SOCKET << std::endl;
+		}
+		else{
+			int ping_counter = 0;
+			bool first_reply = false;
+			SocketCode ret2 = SOCKET_CODE_OK;
+
+			do{
+				SocketCode ret2 = msg.ReadFromSocket(g_socket);
+				
+				if(ret2 == SOCKET_CODE_OK){
+					char ret_code = msg.InspectByte();
+					if(ret_code == AP_MSG_ERROR){
+						msg.GetByte();
+						std::string error_desc = msg.GetString();
+						std::cerr << "[sendMsg] MSG_ERROR: " << error_desc << std::endl;
+						return SOCKET_CODE_ERROR;
+					}
+
+					if(!first_reply){
+						ret = ret2;
+						first_reply = true;
+					}
+					else{
+						--ping_counter;
+					}
+				}
+				else if(ret2 == SOCKET_CODE_TIMEOUT){
+					NetworkMessage msg_ping;
+					msg_ping.AddByte(AP_MSG_PING);
+					if(msg_ping.WriteToSocket(g_socket) == SOCKET_CODE_OK){
+						++ping_counter;
+					}
+				}
+				else{
+					break;
+				}
+
+			}while(ping_counter > 0);
+		}
+	}
+	else if(ret == SOCKET_CODE_ERROR){
+		std::cerr << "[sendMsg] error while sending - " << ERROR_SOCKET << std::endl;
 	}
 
-#if defined WIN32 || defined __WINDOWS__
-	mode = 1;
-	ioctlsocket(g_socket, FIONBIO, &mode);
-#else
-	flags = fcntl(g_socket, F_GETFL);
-	fcntl(g_socket, F_SETFL, flags | O_NONBLOCK);
-#endif
 	return ret;
 }
 
@@ -594,14 +658,14 @@ bool sendMsg(NetworkMessage& msg, uint32_t* key /*= NULL*/)
 
 defcommands commands[] = {
 	{"server", &setServer},
-	{"connect", &cmdConnect},
-	{"sleep", &sleep},
+	{"connect", &commandConnect},
 	{"broadcast", &commandBroadcast},
 	{"closeserver", &commandCloseServer},
 	{"saveserver", &commandSaveServer},
 	{"shutdown", &commandShutdown},
 	{"payhouses", &commandPayHouses},
 	{"disconnect", &commandDisconnect},
+	{"sleep", &sleep},
 	{"LAST", &last},
 	//internal commands
 	{"ping", &ping},

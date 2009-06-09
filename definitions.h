@@ -22,7 +22,7 @@
 #define __OTADMIN_DEFINITIONS_H__
 
 #if defined __WINDOWS__ || defined WIN32
-
+	#include <sys/timeb.h>
 #else
 	#include "stdint.h"
 #endif
@@ -43,10 +43,17 @@ typedef unsigned short uint16_t;
 typedef unsigned char uint8_t;
 #endif
 
-inline void OTSYS_SLEEP(uint32_t t){
+inline void OTSYS_SLEEP(uint32_t t)
+{
 	Sleep(t);
 }
 
+inline long long OTSYS_TIME()
+{
+  _timeb t;
+  _ftime(&t);
+  return ((long long)t.millitm) + ((long long)t.time) * 1000;
+}
 
 #else
 
@@ -85,6 +92,13 @@ inline void OTSYS_SLEEP(int t)
 	tv.tv_sec  = t / 1000;
 	tv.tv_nsec = (t % 1000)*1000000;
 	nanosleep(&tv, NULL);
+}
+
+inline long long OTSYS_TIME()
+{
+	timeb t;
+	ftime(&t);
+	return ((long long)t.millitm) + ((long long)t.time) * 1000;
 }
 
 #endif

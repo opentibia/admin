@@ -60,78 +60,130 @@ void NetworkMessage::Reset()
 
 /******************************************************************************/
 
-bool NetworkMessage::ReadFromSocket(SOCKET socket)
+SocketCode NetworkMessage::ReadFromSocket(SOCKET socket, int timeout /*= RETRY_TIME*/)
 {
-	// just read the size to avoid reading 2 messages at once
-	m_MsgSize = recv(socket, (char*)m_MsgBuf, 2, 0);
+	int read_bytes = 0;
+	int sleep_time = 0;
+	m_MsgSize = 0;
+
+	do{
+		// just read the size to avoid reading 2 messages at once
+		int b = recv(socket, (char*)m_MsgBuf + read_bytes, 2 - read_bytes, 0);
+
+		if(b <= 0){
+			int errnum;
+#if defined WIN32 || defined __WINDOWS__
+			errnum = ::WSAGetLastError();
+#else
+			errnum = errno;
+#endif
+			if(errnum == EWOULDBLOCK){
+				b = 0;
+				OTSYS_SLEEP(100);
+				sleep_time += 100;
+				if(sleep_time > timeout){
+					Reset();
+					return SOCKET_CODE_TIMEOUT;
+				}
+			}
+			else{
+				Reset();
+				return SOCKET_CODE_ERROR;
+			}
+		}
+
+		read_bytes += b;
+
+	}while(read_bytes < 2);
+
+	m_MsgSize = read_bytes;
 	
 	// for now we expect 2 bytes at once, it should not be splitted
 	int datasize = m_MsgBuf[0] | m_MsgBuf[1] << 8;
 	if((m_MsgSize != 2) || (datasize > NETWORKMESSAGE_MAXSIZE-2)){
-		int errnum;
-#if defined WIN32 || defined __WINDOWS__
-		errnum = ::WSAGetLastError();
-#else
-		errnum = errno;
-#endif
-		if(errnum == EWOULDBLOCK){
-			m_MsgSize = 0;
-			return true;
-		}
-
 		Reset();
-		return false;
+		return SOCKET_CODE_ERROR;
 	}
 
-	// read the real data
-	m_MsgSize += recv(socket, (char*)m_MsgBuf+2, datasize, 0);
+	read_bytes = 0;
+
+	do{
+		// read the real data
+		int b = recv(socket, (char*)m_MsgBuf + read_bytes + 2, datasize - read_bytes, 0);
+
+		if(b <= 0){
+			int errnum;
+#if defined WIN32 || defined __WINDOWS__
+			errnum = ::WSAGetLastError();
+#else
+			errnum = errno;
+#endif
+			if(errnum == EWOULDBLOCK){
+				b = 0;
+				OTSYS_SLEEP(100);
+				sleep_time += 100;
+				if(sleep_time > timeout){
+					Reset();
+					return SOCKET_CODE_TIMEOUT;
+					break;
+				}
+			}
+			else{
+				Reset();
+				return SOCKET_CODE_ERROR;
+				break;
+			}
+		}
+
+		read_bytes += b;
+		m_MsgSize += b;
+	}while(read_bytes < datasize);
 
 	// we got something unexpected/incomplete
 	if((m_MsgSize <= 2) || ((m_MsgBuf[0] | m_MsgBuf[1] << 8) != m_MsgSize-2)){
 		Reset();
-		return false;
+		return SOCKET_CODE_ERROR;
 	}
+
 	m_ReadPos = 2;
 	//decrypt
 	if(m_encryptionEnabled){
 		if(!m_keyset){
 			std::cout << "Failure: [NetworkMessage::ReadFromSocket]. Key not set" << std::endl;
-			return false;
+			return SOCKET_CODE_ERROR;
 		}
 		if((m_MsgSize - 2) % 8 != 0){
 			std::cout << "Failure: [NetworkMessage::ReadFromSocket]. Not valid encrypted message size" << std::endl;
-			return false;
+			return SOCKET_CODE_ERROR;
 		}
 		XTEA_decrypt();
 		int tmp = GetU16();
 		if(tmp > m_MsgSize - 4){
 			std::cout << "Failure: [NetworkMessage::ReadFromSocket]. Not valid unencrypted message size" << std::endl;
-			return false;
+			return SOCKET_CODE_ERROR;
 		}
 		m_MsgSize = tmp;
 	}
-	return true;
+	return SOCKET_CODE_OK;
 }
 
-
-bool NetworkMessage::WriteToSocket(SOCKET socket)
+SocketCode NetworkMessage::WriteToSocket(SOCKET socket, int timeout /*= RETRY_TIME*/)
 {
 	if (m_MsgSize == 0)
-		return true;
+		return SOCKET_CODE_OK;
 
 	m_MsgBuf[2] = (unsigned char)(m_MsgSize);
 	m_MsgBuf[3] = (unsigned char)(m_MsgSize >> 8);
   
-	bool ret = true;
 	int sendBytes = 0;
 	int flags = 0;
-	int retry = 0;
+	int sleep_time = 0;
 	
 	int start;
 	if(m_encryptionEnabled){
 		if(!m_keyset){
 			std::cout << "Failure: [NetworkMessage::ReadFromSocket]. Key not set" << std::endl;
-			return false;
+			return SOCKET_CODE_ERROR;
 		}
 		start = 0;
 		XTEA_encrypt();
@@ -151,23 +203,22 @@ bool NetworkMessage::WriteToSocket(SOCKET socket)
 #endif
 			if(errnum == EWOULDBLOCK){
 				b = 0;
-				OTSYS_SLEEP(10);
-				retry++;
-				if(retry == 10){
-					ret = false;
+				OTSYS_SLEEP(100);
+				sleep_time += 100;
+				if(sleep_time > timeout){
+					return SOCKET_CODE_TIMEOUT;
 					break;
 				}
 			}
-			else
-			{
-				ret = false;
+			else{
+				return SOCKET_CODE_ERROR;
 				break;
 			}
 		}
     	sendBytes += b;
 	}while(sendBytes < m_MsgSize+2);
 
-	return ret;
+	return SOCKET_CODE_OK;
 }
 
 

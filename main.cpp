@@ -40,7 +40,6 @@ CommandFunc getCommand(char* name, bool internal = false);
 
 typedef std::list<CommandLine*> COMMANDS_QUEUE;
 
-
 COMMANDS_QUEUE commands_queue;
 long next_command_delay = 0;
 SOCKET g_socket = SOCKET_ERROR;
@@ -130,7 +129,7 @@ int main(int argc, char* argv[])
 		if(g_connected){
 			//check socket state
 			//select(...)
-			if(msg.ReadFromSocket(g_socket)){
+			if(msg.ReadFromSocket(g_socket, 1000) == SOCKET_CODE_OK){
 				//parse it
 				//just can recieve AP_MSG_MESSAGE or AP_MSG_ERROR
 			}
@@ -142,18 +141,28 @@ int main(int argc, char* argv[])
 		}
 		else{
 			next_command_delay = 0;
+			long long time = OTSYS_TIME();
+
 			//execute the command
-			if((*it)->function((*it)->params) == 1){
+			int retCode = (*it)->function((*it)->params);
+
+			if(retCode == 1){
 				//everything was ok
 				++it;
 			}
+			else if(retCode == 2){
+				//timeout
+			}
 			else{
 				//error in the command
-				exit_code  = 1;
+				exit_code = 1;
 				break;
 			}
+
+			last_ping += (OTSYS_TIME() - time);
 		}
-		if(it != commands_queue.end() && last_ping > 20000){
+
+		if(it != commands_queue.end() && last_ping > 10000){
 			//send ping here
 			ping_function(NULL);
 			last_ping = 0;

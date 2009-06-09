@@ -24,6 +24,14 @@
 #include "definitions.h"
 #include "rsa.h"
 
+#define RETRY_TIME 10000
+
+enum SocketCode{
+	SOCKET_CODE_OK,
+	SOCKET_CODE_TIMEOUT,
+	SOCKET_CODE_ERROR,
+};
+
 class NetworkMessage
 {
 public:
@@ -35,8 +43,8 @@ public:
 	void Reset();
 
 	// socket functions
-	bool ReadFromSocket(SOCKET socket);
-	bool WriteToSocket(SOCKET socket);
+	SocketCode ReadFromSocket(SOCKET socket, int timeout = RETRY_TIME);
+	SocketCode WriteToSocket(SOCKET socket, int timeout = RETRY_TIME);
 
 	// simply read functions for incoming message
 	uint8_t  InspectByte();
