@@ -28,6 +28,7 @@
 extern long next_command_delay;
 extern SOCKET g_socket;
 extern bool g_connected;
+extern bool g_shutdown;
 
 int sendCommand(char commandByte, char* command);
 
@@ -400,6 +401,10 @@ int commandShutdown(char* params)
 	std::cout << "Server shutdown." << std::endl;
 
 	int ret = sendCommand(CMD_SHUTDOWN_SERVER, NULL);
+	if(ret == 1){
+		g_shutdown = true;
+	}
+
 	if(ret == -1){
 		std::cerr << "[shutdown] error in server shutdown" << std::endl;
 		return -1;
@@ -494,7 +499,7 @@ int ping(char* params)
 		std::cerr << "[ping] Warning: parameters ignored" << std::endl;
 	}
 
-	std::cout << "PING" << std::endl;
+	//std::cout << "PING" << std::endl;
 
 	NetworkMessage msg;
 	msg.AddByte(AP_MSG_PING);
@@ -638,6 +643,7 @@ SocketCode sendMsg(NetworkMessage& msg, uint32_t* key /*= NULL*/)
 					NetworkMessage msg_ping;
 					msg_ping.AddByte(AP_MSG_PING);
 					if(msg_ping.WriteToSocket(g_socket) == SOCKET_CODE_OK){
+						//std::cout << "PING" << std::endl;
 						++ping_counter;
 					}
 				}

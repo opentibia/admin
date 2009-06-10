@@ -44,6 +44,7 @@ COMMANDS_QUEUE commands_queue;
 long next_command_delay = 0;
 SOCKET g_socket = SOCKET_ERROR;
 bool g_connected = false;
+bool g_shutdown = false;
 
 CommandFunc disconnect_function;
 CommandFunc ping_function;
@@ -162,7 +163,7 @@ int main(int argc, char* argv[])
 			last_ping += (OTSYS_TIME() - time);
 		}
 
-		if(it != commands_queue.end() && last_ping > 10000){
+		if(!g_shutdown && last_ping > 10000){
 			//send ping here
 			ping_function(NULL);
 			last_ping = 0;
