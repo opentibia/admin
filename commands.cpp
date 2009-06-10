@@ -494,6 +494,8 @@ int ping(char* params)
 		std::cerr << "[ping] Warning: parameters ignored" << std::endl;
 	}
 
+	std::cout << "PING" << std::endl;
+
 	NetworkMessage msg;
 	msg.AddByte(AP_MSG_PING);
 

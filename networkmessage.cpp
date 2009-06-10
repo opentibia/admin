@@ -79,8 +79,8 @@ SocketCode NetworkMessage::ReadFromSocket(SOCKET socket, int timeout /*= RETRY_T
 #endif
 			if(errnum == EWOULDBLOCK){
 				b = 0;
-				OTSYS_SLEEP(100);
-				sleep_time += 100;
+				OTSYS_SLEEP(10);
+				sleep_time += 10;
 				if(sleep_time > timeout){
 					Reset();
 					return SOCKET_CODE_TIMEOUT;

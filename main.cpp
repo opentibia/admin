@@ -129,7 +129,7 @@ int main(int argc, char* argv[])
 		if(g_connected){
 			//check socket state
 			//select(...)
-			if(msg.ReadFromSocket(g_socket, 1000) == SOCKET_CODE_OK){
+			if(msg.ReadFromSocket(g_socket, 0) == SOCKET_CODE_OK){
 				//parse it
 				//just can recieve AP_MSG_MESSAGE or AP_MSG_ERROR
 			}
