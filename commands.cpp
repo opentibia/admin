@@ -436,6 +436,25 @@ int commandSaveServer(char* params)
 	return ret;
 }
 
+//sendmail
+int commandSendMail(char* params)
+{
+	if(g_connected != true){
+		std::cerr << "[sendmail] not connected" << std::endl;
+		return -1;
+	}
+
+	std::cout << "Sending mail." << std::endl;
+
+	int ret = sendCommand(CMD_SEND_MAIL, params);
+	if(ret == -1){
+		std::cerr << "[sendmail] error in send mail" << std::endl;
+		return -1;
+	}
+
+	return ret;
+}
+
 //kickplayer
 int commandKickPlayer(char* params)
 {
@@ -670,6 +689,7 @@ defcommands commands[] = {
 	{"broadcast", &commandBroadcast},
 	{"closeserver", &commandCloseServer},
 	{"saveserver", &commandSaveServer},
+	{"sendmail", &commandSendMail},
 	{"shutdown", &commandShutdown},
 	{"payhouses", &commandPayHouses},
 	{"disconnect", &commandDisconnect},

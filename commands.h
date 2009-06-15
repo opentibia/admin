@@ -69,6 +69,7 @@ enum{
 	//CMD_SERVER_INFO = 11,
 	//CMD_GETHOUSE = 12,
 	CMD_SAVE_SERVER = 13,
+	CMD_SEND_MAIL = 14,
 };
 
 
