@@ -18,9 +18,12 @@
 // Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 //////////////////////////////////////////////////////////////////////
 
+#define NOMINMAX
+
 #include <string>
 #include <iostream>
 #include <sstream>
+#include <cmath>
 
 #include "definitions.h"
 
