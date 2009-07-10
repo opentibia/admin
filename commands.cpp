@@ -436,6 +436,52 @@ int commandSaveServer(char* params)
 	return ret;
 }
 
+//shallowsaveserver
+int commandShallowSaveServer(char* params)
+{
+	if(g_connected != true){
+		std::cerr << "[shallowsaveserver] not connected" << std::endl;
+		return -1;
+	}
+
+	if(params){
+		std::cerr << "[shallowsaveserver] Warning: parameters ignored" << std::endl;
+	}
+
+	std::cout << "Saving server (shallow)." << std::endl;
+
+	int ret = sendCommand(CMD_SHALLOW_SAVE_SERVER, NULL);
+	if(ret == -1){
+		std::cerr << "[shallowsaveserver] error in server save" << std::endl;
+		return -1;
+	}
+
+	return ret;
+}
+
+//relationalsaveserver
+int commandRelationalSaveServer(char* params)
+{
+	if(g_connected != true){
+		std::cerr << "[relationalsaveserver] not connected" << std::endl;
+		return -1;
+	}
+
+	if(params){
+		std::cerr << "[relationalsaveserver] Warning: parameters ignored" << std::endl;
+	}
+
+	std::cout << "Saving server (relational)." << std::endl;
+
+	int ret = sendCommand(CMD_RELATIONAL_SAVE_SERVER, NULL);
+	if(ret == -1){
+		std::cerr << "[relationalsaveserver] error in server save" << std::endl;
+		return -1;
+	}
+
+	return ret;
+}
+
 //sendmail
 int commandSendMail(char* params)
 {
@@ -689,6 +735,8 @@ defcommands commands[] = {
 	{"broadcast", &commandBroadcast},
 	{"closeserver", &commandCloseServer},
 	{"saveserver", &commandSaveServer},
+	{"shallowsaveserver", &commandShallowSaveServer},
+	{"relationalsaveserver", &commandRelationalSaveServer},
 	{"sendmail", &commandSendMail},
 	{"shutdown", &commandShutdown},
 	{"payhouses", &commandPayHouses},
