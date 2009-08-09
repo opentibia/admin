@@ -545,7 +545,7 @@ int commandPayHouses(char* params)
 
 	int ret = sendCommand(CMD_PAY_HOUSES, NULL);
 	if(ret == -1){
-		std::cerr << "[payhouses] error in server shutdown" << std::endl;
+		std::cerr << "[payhouses] error paying houses" << std::endl;
 		return -1;
 	}
 
