@@ -127,14 +127,6 @@ int main(int argc, char* argv[])
 	COMMANDS_QUEUE::iterator it = commands_queue.begin();
 	long last_ping = 0;
 	while(it != commands_queue.end()){
-		if(g_connected){
-			//check socket state
-			//select(...)
-			if(msg.ReadFromSocket(g_socket, 0) == SOCKET_CODE_OK){
-				//parse it
-				//just can recieve AP_MSG_MESSAGE or AP_MSG_ERROR
-			}
-		}
 		OTSYS_SLEEP(250);
 		last_ping = last_ping + 250;
 		if(next_command_delay > 250){

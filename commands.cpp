@@ -625,7 +625,7 @@ int sendCommand(char commandByte, char* command)
 		return 0;
 	}
 	else{
-		std::cerr << "[sendCommand] no known return code" << std::endl;
+		std::cerr << "[sendCommand] no known return code - " << ret_code << std::endl;
 		return 0;
 	}
 }
@@ -666,58 +666,33 @@ SocketCode sendMsg(NetworkMessage& msg, uint32_t* key /*= NULL*/)
 			msg.setEncryptionKey(key);
 		}
 
-		ret = msg.ReadFromSocket(g_socket);
-		if(ret == SOCKET_CODE_OK){ 
-			char ret_code = msg.InspectByte();
-			if(ret_code == AP_MSG_ERROR){
-				msg.GetByte();
-				std::string error_desc = msg.GetString();
-				std::cerr << "[sendMsg] MSG_ERROR: " << error_desc << std::endl;
-				ret = SOCKET_CODE_ERROR;
+		do{
+			ret = msg.ReadFromSocket(g_socket);
+			if(ret == SOCKET_CODE_OK){ 
+				char ret_code = msg.InspectByte();
+				if(ret_code == AP_MSG_ERROR){
+					msg.GetByte();
+					std::string error_desc = msg.GetString();
+					std::cerr << "[sendMsg] MSG_ERROR: " << error_desc << std::endl;
+					return SOCKET_CODE_ERROR;
+				}
 			}
-		}
-		else if(ret == SOCKET_CODE_ERROR){
-			std::cerr << "[sendMsg] error while reading - " << ERROR_SOCKET << std::endl;
-		}
-		else{
-			int ping_counter = 0;
-			bool first_reply = false;
-			SocketCode ret2 = SOCKET_CODE_OK;
-
-			do{
-				SocketCode ret2 = msg.ReadFromSocket(g_socket);
+			else if(ret == SOCKET_CODE_ERROR){
+				std::cerr << "[sendMsg] error while reading - " << ERROR_SOCKET << std::endl;
+				return ret;
+			}
+			else{
+				//timeout, lets just wait a bit
+				OTSYS_SLEEP(5000);
 				
-				if(ret2 == SOCKET_CODE_OK){
-					char ret_code = msg.InspectByte();
-					if(ret_code == AP_MSG_ERROR){
-						msg.GetByte();
-						std::string error_desc = msg.GetString();
-						std::cerr << "[sendMsg] MSG_ERROR: " << error_desc << std::endl;
-						return SOCKET_CODE_ERROR;
-					}
+				NetworkMessage msg_keepAlive;
+				msg_keepAlive.AddByte(AP_MSG_KEEP_ALIVE);
+				if(msg_keepAlive.WriteToSocket(g_socket) != SOCKET_CODE_OK){
+					return SOCKET_CODE_ERROR;
+				}
+			}
 
-					if(!first_reply){
-						ret = ret2;
-						first_reply = true;
-					}
-					else{
-						--ping_counter;
-					}
-				}
-				else if(ret2 == SOCKET_CODE_TIMEOUT){
-					NetworkMessage msg_ping;
-					msg_ping.AddByte(AP_MSG_PING);
-					if(msg_ping.WriteToSocket(g_socket) == SOCKET_CODE_OK){
-						//std::cout << "PING" << std::endl;
-						++ping_counter;
-					}
-				}
-				else{
-					break;
-				}
-
-			}while(ping_counter > 0);
-		}
+		}while(ret == SOCKET_CODE_TIMEOUT);
 	}
 	else if(ret == SOCKET_CODE_ERROR){
 		std::cerr << "[sendMsg] error while sending - " << ERROR_SOCKET << std::endl;
